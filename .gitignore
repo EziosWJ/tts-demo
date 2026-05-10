@@ -1,3 +1,9 @@
 .claude
 .agents
 .codex
+.scratch/
+__pycache__/
+*.pyc
+.venv/
+storage/audio/*.mp3
+storage/tts_records.jsonl

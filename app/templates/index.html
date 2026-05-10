@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 24px; font-size: 24px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
+        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; resize: vertical; font-family: inherit; }
+        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #fff; }
+        button { width: 100%; padding: 12px; background: #1677ff; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+        button:hover:not(:disabled) { background: #0958d9; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+        .status { margin-top: 16px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+        .status.loading { display: block; background: #e6f4ff; color: #1677ff; }
+        .status.error { display: block; background: #fff2f0; color: #cf1322; }
+        .result { margin-top: 20px; padding: 16px; background: #fff; border: 1px solid #e8e8e8; border-radius: 6px; display: none; }
+        .result.show { display: block; }
+        .result audio { width: 100%; margin-bottom: 12px; }
+        .result .info { font-size: 13px; color: #666; line-height: 1.8; word-break: break-all; }
+        .result .info span { color: #333; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TTS Demo</h1>
+
+        <div class="form-group">
+            <label for="text">文本内容</label>
+            <textarea id="text">请你用自然、专业的语气，邀请候选人做一个一分钟的自我介绍。</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="provider">Provider</label>
+            <select id="provider">
+                <option value="edge" selected>edge</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="voice">音色</label>
+            <select id="voice">
+                <option value="zh-CN-XiaoxiaoNeural" selected>zh-CN-XiaoxiaoNeural</option>
+                <option value="zh-CN-YunxiNeural">zh-CN-YunxiNeural</option>
+                <option value="zh-CN-YunjianNeural">zh-CN-YunjianNeural</option>
+                <option value="zh-CN-XiaoyiNeural">zh-CN-XiaoyiNeural</option>
+            </select>
+        </div>
+
+        <button id="btnGenerate" onclick="generate()">生成语音</button>
+
+        <div id="status" class="status"></div>
+
+        <div id="result" class="result">
+            <audio id="audio" controls></audio>
+            <div class="info">
+                <div>音频 URL：<span id="audioUrl"></span></div>
+                <div>生成耗时：<span id="duration"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btn = document.getElementById('btnGenerate');
+        const statusEl = document.getElementById('status');
+        const resultEl = document.getElementById('result');
+        const audioEl = document.getElementById('audio');
+
+        function showStatus(type, msg) {
+            statusEl.className = 'status ' + type;
+            statusEl.textContent = msg;
+        }
+
+        function hideStatus() {
+            statusEl.className = 'status';
+            statusEl.textContent = '';
+        }
+
+        async function generate() {
+            const text = document.getElementById('text').value.trim();
+            const provider = document.getElementById('provider').value;
+            const voice = document.getElementById('voice').value;
+
+            if (!text) {
+                showStatus('error', '请输入文本内容');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            hideStatus();
+            resultEl.classList.remove('show');
+            showStatus('loading', '正在生成语音，请稍候...');
+
+            const start = Date.now();
+
+            try {
+                const resp = await fetch('/api/tts/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, provider, voice })
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({ detail: '请求失败' }));
+                    throw new Error(err.detail || `HTTP ${resp.status}`);
+                }
+
+                const data = await resp.json();
+                const elapsed = Date.now() - start;
+
+                audioEl.src = data.audio_url;
+                audioEl.play().catch(() => {});
+                document.getElementById('audioUrl').textContent = data.audio_url;
+                document.getElementById('duration').textContent = elapsed + ' ms';
+
+                hideStatus();
+                resultEl.classList.add('show');
+            } catch (e) {
+                showStatus('error', '生成失败：' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '生成语音';
+            }
+        }
+    </script>
+</body>
+</html>
