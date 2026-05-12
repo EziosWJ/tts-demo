@@ -44,9 +44,19 @@ async def tts_generate(request: Request, body: TTSRequest):
         raise HTTPException(status_code=500, detail=f"TTS 生成失败: {e}")
 
 
+@app.get("/api/voices")
+async def list_voices(provider: str = "edge"):
+    try:
+        p = get_provider(provider)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return p.list_voices()
+
+
 @app.get("/audio/{filename}")
 async def serve_audio(filename: str):
     file_path = _AUDIO_DIR / filename
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="音频文件不存在")
-    return FileResponse(file_path, media_type="audio/mpeg")
+    media_type = "audio/wav" if filename.endswith(".wav") else "audio/mpeg"
+    return FileResponse(file_path, media_type=media_type)

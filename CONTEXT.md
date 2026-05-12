@@ -5,7 +5,7 @@
 ## Language
 
 **Provider**:
-TTS 语音合成服务的提供方。本项目支持三种 provider，但只有 edge-tts 是完整实现的。
+TTS 语音合成服务的提供方。本项目支持三种 provider：edge-tts（完整）、OpenAI-compatible（完整）、CosyVoice（完整）。
 _Avoid_: engine, backend, service (这些词太泛)
 
 **Voice**:
@@ -13,8 +13,16 @@ TTS 合成时使用的音色标识符，格式如 `zh-CN-XiaoxiaoNeural`。每�
 _Avoid_: speaker, voice model
 
 **Audio**:
-TTS 生成的 mp3 文件。保存在 `storage/audio/` 目录下，文件名格式为 `tts_时间戳_随机ID.mp3`。
+TTS 生成的音频文件。edge-tts 和 OpenAI provider 生成 mp3，CosyVoice 生成 wav。保存在 `storage/audio/` 目录下，文件名格式为 `tts_时间戳_随机ID.mp3`（或 `.wav`）。
 _Avoid_: sound, recording
+
+**SFT 模式**:
+CosyVoice 的预置音色推理模式。传入文本和音色 ID（如 `中文女`），直接生成音频。不需要参考音频或音色克隆。
+_Avoid_: preset mode, default mode
+
+**PCM 音频**:
+CosyVoice 推理服务返回的原始音频格式（int16 PCM，22050 Hz）。没有文件头，需要在 provider 中转换为 WAV 格式才能被浏览器播放。
+_Avoid_: raw audio, uncompressed audio
 
 **Record**:
 一次 TTS 生成的完整记录，包含文本、provider、voice、音频路径、耗时等。以 JSONL 格式追加写入 `storage/tts_records.jsonl`。
@@ -35,7 +43,7 @@ _Avoid_: latency, time
 
 ### Provider 范围
 
-第一版只完整实现 edge-tts。OpenAI provider 做最小占位（结构在，配置缺失报错）。CosyVoice 只留占位文件和注释。
+edge-tts、OpenAI-compatible、CosyVoice 三种 provider 均已完整实现。CosyVoice 通过 httpx 调用独立部署的 CosyVoice 推理服务（FastAPI server，默认端口 50000），仅支持 SFT 模式。
 
 ### 前端技术
 
@@ -60,6 +68,14 @@ CLI 和 Web 共享同一个 `tts_service.py`。CLI 是薄壳，调用 service �
 ### 文件存储
 
 文件操作逻辑放在 `tts_service.py`，用 `pathlib`。不需要单独的 `audio_store.py`。
+
+### CosyVoice 集成方式
+
+CosyVoice 作为独立推理服务部署，TTS Demo 通过 httpx 调用其 FastAPI 端点（`/inference_sft`）。CosyVoice 返回 raw PCM 数据，在 provider 中转换为 WAV 格式。不将 PyTorch 等重依赖引入 TTS Demo。
+
+### 音色管理
+
+每个 provider 独立维护音色列表，通过 `list_voices()` 方法返回 `list[str]`。前端通过 `/api/voices?provider=xxx` 接口动态获取音色列表，切换 provider 时自动刷新下拉框。
 
 ## Example dialogue
 

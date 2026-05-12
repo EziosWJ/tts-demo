@@ -22,6 +22,9 @@ class OpenAITTSProvider(TTSProvider):
         )
         self._model = OPENAI_TTS_MODEL
 
+    def list_voices(self) -> list[str]:
+        return ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+
     async def generate(self, text: str, voice: str) -> tuple[bytes, int]:
         start = time.perf_counter()
 

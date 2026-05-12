@@ -39,17 +39,14 @@
             <label for="provider">Provider</label>
             <select id="provider">
                 <option value="edge" selected>edge</option>
+                <option value="openai">openai</option>
+                <option value="cosyvoice">cosyvoice</option>
             </select>
         </div>
 
         <div class="form-group">
             <label for="voice">音色</label>
-            <select id="voice">
-                <option value="zh-CN-XiaoxiaoNeural" selected>zh-CN-XiaoxiaoNeural</option>
-                <option value="zh-CN-YunxiNeural">zh-CN-YunxiNeural</option>
-                <option value="zh-CN-YunjianNeural">zh-CN-YunjianNeural</option>
-                <option value="zh-CN-XiaoyiNeural">zh-CN-XiaoyiNeural</option>
-            </select>
+            <select id="voice"></select>
         </div>
 
         <button id="btnGenerate" onclick="generate()">生成语音</button>
@@ -80,6 +77,31 @@
             statusEl.className = 'status';
             statusEl.textContent = '';
         }
+
+        async function loadVoices(provider) {
+            const voiceSelect = document.getElementById('voice');
+            voiceSelect.innerHTML = '';
+            try {
+                const resp = await fetch('/api/voices?provider=' + encodeURIComponent(provider));
+                if (!resp.ok) throw new Error('Failed to load voices');
+                const voices = await resp.json();
+                voices.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = v;
+                    voiceSelect.appendChild(opt);
+                });
+            } catch (e) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '加载音色失败';
+                voiceSelect.appendChild(opt);
+            }
+        }
+
+        document.getElementById('provider').addEventListener('change', function() {
+            loadVoices(this.value);
+        });
 
         async function generate() {
             const text = document.getElementById('text').value.trim();
@@ -128,6 +150,8 @@
                 btn.textContent = '生成语音';
             }
         }
+
+        loadVoices('edge');
     </script>
 </body>
 </html>

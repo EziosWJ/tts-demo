@@ -8,6 +8,8 @@
 - FastAPI + uvicorn
 - edge-tts（默认 TTS 引擎）
 - openai（OpenAI-compatible TTS 支持）
+- CosyVoice 2（开源语音合成模型，独立部署）
+- httpx（HTTP 客户端，用于调用 CosyVoice 服务）
 - uv（依赖管理）
 
 ## 安装依赖
@@ -48,6 +50,8 @@ uv run python -m app.cli "请你做一个自我介绍" --provider edge --voice z
 | `OPENAI_TTS_API_KEY` | 空 | OpenAI-compatible 服务的 API Key |
 | `OPENAI_TTS_MODEL` | `tts-1` | OpenAI TTS 模型名 |
 | `OPENAI_TTS_VOICE` | `alloy` | OpenAI TTS 音色 |
+| `COSYVOICE_BASE_URL` | `http://localhost:50000` | CosyVoice 推理服务地址 |
+| `COSYVOICE_DEFAULT_VOICE` | `中文女` | CosyVoice 默认音色 |
 
 ## edge-tts 说明
 
@@ -86,9 +90,47 @@ OPENAI_TTS_MODEL=tts-1
 OPENAI_TTS_VOICE=alloy
 ```
 
-## CosyVoice 预留说明
+## CosyVoice Provider 说明
 
-[CosyVoice](https://github.com/FunAudioLLM/CosyVoice) 是阿里开源的语音合成模型，当前版本仅预留接口，暂未实现完整功能。后续可扩展接入。
+[CosyVoice 2](https://github.com/FunAudioLLM/CosyVoice) 是阿里开源的语音合成模型，支持多语言、多音色的高质量语音合成。
+
+### 部署 CosyVoice 推理服务
+
+CosyVoice 作为独立服务部署，TTS Demo 通过 HTTP 调用。仅支持 SFT 模式（预置音色）。
+
+```bash
+# 1. 克隆 CosyVoice 仓库
+git clone https://github.com/FunAudioLLM/CosyVoice.git
+cd CosyVoice
+
+# 2. 安装依赖（需要 GPU 环境）
+pip install -r requirements.txt
+
+# 3. 启动 FastAPI 推理服务（默认端口 50000）
+python runtime/python/fastapi/server.py --port 50000
+```
+
+服务启动后，可用以下命令测试：
+
+```bash
+curl -X GET "http://localhost:50000/inference_sft?tts_text=你好世界&spk_id=中文女" --output test.wav
+```
+
+### 配置 TTS Demo 使用 CosyVoice
+
+在 `.env` 中设置：
+
+```
+TTS_PROVIDER=cosyvoice
+COSYVOICE_BASE_URL=http://localhost:50000
+COSYVOICE_DEFAULT_VOICE=中文女
+```
+
+### 可用音色
+
+SFT 模式下预置音色：`中文女`、`中文男`、`英文女`、`英文男`、`日语男`、`粤语女`、`韩语女`。
+
+页面上选择 CosyVoice provider 后，音色列表会自动从后端获取。
 
 ## 项目结构
 

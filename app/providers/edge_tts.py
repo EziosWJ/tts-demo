@@ -10,6 +10,14 @@ from .base import TTSProvider
 class EdgeTTSProvider(TTSProvider):
     """基于 edge-tts 的 TTS Provider。"""
 
+    def list_voices(self) -> list[str]:
+        return [
+            "zh-CN-XiaoxiaoNeural",
+            "zh-CN-YunxiNeural",
+            "zh-CN-YunjianNeural",
+            "zh-CN-XiaoyiNeural",
+        ]
+
     async def generate(self, text: str, voice: str) -> tuple[bytes, int]:
         """使用 edge-tts 生成语音音频。
 

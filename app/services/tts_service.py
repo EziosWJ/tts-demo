@@ -7,27 +7,36 @@ from pathlib import Path
 
 from app.providers.base import TTSProvider
 from app.providers.edge_tts import EdgeTTSProvider
+from app.providers.cosyvoice_provider import CosyVoiceProvider
 from app.schemas.tts import TTSRequest, TTSResponse
 
 _STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / "storage"
 _AUDIO_DIR = _STORAGE_DIR / "audio"
 _RECORDS_FILE = _STORAGE_DIR / "tts_records.jsonl"
 
-# Provider 注册表
+# Provider 注册表（openai 需要 API key，延迟初始化）
 _registry: dict[str, TTSProvider] = {
     "edge": EdgeTTSProvider(),
+    "cosyvoice": CosyVoiceProvider(),
 }
+
+
+def _get_openai_provider() -> TTSProvider:
+    from app.providers.openai_tts import OpenAITTSProvider
+    return OpenAITTSProvider()
 
 
 def get_provider(name: str) -> TTSProvider:
     """获取指定名称的 TTS Provider。
 
     Raises:
-        ValueError: provider 不存在时抛出。
+        ValueError: provider 不存在或配置缺失时抛出。
     """
     provider = _registry.get(name)
     if provider is None:
-        available = ", ".join(_registry.keys())
+        if name == "openai":
+            return _get_openai_provider()
+        available = ", ".join(list(_registry.keys()) + ["openai"])
         raise ValueError(f"未知的 TTS provider: '{name}'，可用: {available}")
     return provider
 
@@ -42,7 +51,8 @@ async def generate_tts(
 
     now = datetime.now()
     rand_id = uuid.uuid4().hex[:8]
-    filename = f"tts_{now:%Y%m%d_%H%M%S}_{rand_id}.mp3"
+    ext = ".wav" if request.provider == "cosyvoice" else ".mp3"
+    filename = f"tts_{now:%Y%m%d_%H%M%S}_{rand_id}{ext}"
 
     _AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     (_AUDIO_DIR / filename).write_bytes(audio_data)

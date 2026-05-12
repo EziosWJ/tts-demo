@@ -13,6 +13,11 @@ class TTSProvider(ABC):
     """TTS Provider 抽象基类。"""
 
     @abstractmethod
+    def list_voices(self) -> list[str]:
+        """返回该 provider 支持的音色列表。"""
+        ...
+
+    @abstractmethod
     async def generate(self, text: str, voice: str) -> tuple[bytes, int]:
         """生成语音音频。
 
